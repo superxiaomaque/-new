@@ -1,0 +1,80 @@
+# 测试运行步骤
+
+## 方法一：使用快速启动脚本（推荐）
+
+1. 打开终端，进入项目目录
+2. 运行：./快速启动.sh
+3. 等待服务启动完成
+4. 访问 http://localhost:3000
+
+## 方法二：手动启动
+
+### 步骤1：启动后端
+
+打开终端1：
+
+```bash
+cd backend
+
+# 安装依赖（首次运行）
+pip install -r requirements_test.txt
+
+# 启动服务
+python start_test.py
+```
+
+后端将在 http://localhost:8000 启动
+
+### 步骤2：启动前端
+
+打开终端2：
+
+```bash
+cd frontend
+
+# 安装依赖（首次运行）
+npm install
+
+# 启动服务
+npm run dev
+```
+
+前端将在 http://localhost:3000 启动
+
+## 测试流程
+
+1. 访问 http://localhost:3000
+2. 注册账号（任意11位手机号，密码至少6位）
+3. 登录
+4. 点击"开始分析"
+5. 上传至少5张图片
+6. 点击"开始分析"（需要配置豆包API密钥才能成功）
+
+## 注意事项
+
+1. 首次运行需要安装依赖
+2. 如果没有配置豆包API密钥，分析功能会失败
+3. 测试模式使用SQLite，无需MySQL
+4. 数据库文件：backend/test.db
+
+## 配置豆包API密钥
+
+如果需要测试分析功能：
+
+1. 从火山引擎获取API密钥
+2. 设置环境变量：
+   ```bash
+   export DOUBAO_API_KEY=your-api-key
+   ```
+3. 或者修改 backend/test_config.py 中的 DOUBAO_API_KEY
+
+## 常见问题
+
+Q: 端口被占用？
+A: 修改 start_test.py 和 vite.config.js 中的端口号
+
+Q: 依赖安装失败？
+A: 确保Python版本>=3.9，Node.js版本>=16
+
+Q: 数据库错误？
+A: 确保backend目录有写入权限
