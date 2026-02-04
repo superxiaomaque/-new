@@ -7,10 +7,26 @@ import os
 from typing import List, Dict, Any, Tuple, Optional
 from io import BytesIO
 from PIL import Image
-from config import settings
+
+def _get_settings():
+    """动态获取settings，支持测试模式"""
+    try:
+        from config import settings
+        return settings
+    except ImportError:
+        # 测试模式下，config可能被替换为test_config
+        import sys
+        if 'config' in sys.modules:
+            from config import settings
+            return settings
+        else:
+            # 如果config模块不存在，尝试导入test_config
+            from test_config import settings
+            return settings
 
 class DoubaoAPI:
     def __init__(self):
+        settings = _get_settings()
         self.api_key = settings.DOUBAO_API_KEY
         self.api_url = settings.DOUBAO_API_URL
         self.model = settings.DOUBAO_MODEL
@@ -351,9 +367,10 @@ class DoubaoAPI:
             parsed = json.loads(text.strip())
             if isinstance(parsed, dict):
                 print("[DEBUG] 成功：直接解析为JSON")
-                return parsed
-        except:
-            pass
+                # 确保所有字段都是正确的类型
+                return self._normalize_analysis_result(parsed)
+        except Exception as e:
+            print(f"[DEBUG] 直接解析失败: {e}")
         
         # 方法2：尝试提取JSON（去掉可能的markdown代码块标记）
         # 去掉 ```json 和 ``` 标记
@@ -361,16 +378,27 @@ class DoubaoAPI:
         cleaned_text = re.sub(r'```\s*', '', cleaned_text)
         cleaned_text = cleaned_text.strip()
         
-        # 尝试提取第一个完整的JSON对象
-        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', cleaned_text, re.DOTALL)
-        if json_match:
-            try:
-                parsed = json.loads(json_match.group())
-                if isinstance(parsed, dict):
-                    print("[DEBUG] 成功：从文本中提取JSON")
-                    return parsed
-            except Exception as e:
-                print(f"[DEBUG] JSON提取失败: {e}")
+        # 尝试提取第一个完整的JSON对象（支持嵌套）
+        # 使用更强大的正则表达式来匹配嵌套的JSON对象
+        depth = 0
+        start_idx = -1
+        for i, char in enumerate(cleaned_text):
+            if char == '{':
+                if depth == 0:
+                    start_idx = i
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0 and start_idx >= 0:
+                    json_str = cleaned_text[start_idx:i+1]
+                    try:
+                        parsed = json.loads(json_str)
+                        if isinstance(parsed, dict):
+                            print("[DEBUG] 成功：从文本中提取JSON")
+                            return self._normalize_analysis_result(parsed)
+                    except Exception as e:
+                        print(f"[DEBUG] JSON提取失败: {e}")
+                    start_idx = -1
         
         # 方法3：如果无法解析JSON，尝试从文本中提取关键信息
         print("[DEBUG] 警告：无法解析JSON，使用文本提取模式")
@@ -404,6 +432,42 @@ class DoubaoAPI:
             "relationship": "",
             "warnings": ""
         }
+    
+    def _normalize_analysis_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """规范化分析结果，确保所有字段都是正确的类型"""
+        result = {
+            "match_score": int(data.get("match_score", 0)) if isinstance(data.get("match_score"), (int, float, str)) else 0,
+            "success_rate": int(data.get("success_rate", 0)) if isinstance(data.get("success_rate"), (int, float, str)) else 0,
+            "personality": str(data.get("personality", "")) if data.get("personality") else "",
+            "interests": str(data.get("interests", "")) if data.get("interests") else "",
+            "values": str(data.get("values", "")) if data.get("values") else "",
+            "emotion": str(data.get("emotion", "")) if data.get("emotion") else "",
+            "income_analysis": str(data.get("income_analysis", "")) if data.get("income_analysis") else "",
+            "communication": data.get("communication", {}),
+            "relationship": str(data.get("relationship", "")) if data.get("relationship") else "",
+            "warnings": str(data.get("warnings", "")) if data.get("warnings") else "",
+            "summary": str(data.get("summary", "")) if data.get("summary") else ""
+        }
+        
+        # 确保 communication 是字典格式
+        if not isinstance(result["communication"], dict):
+            result["communication"] = {
+                "topics": [],
+                "opening_lines": [],
+                "tips": ""
+            }
+        else:
+            # 确保 communication 的字段都是正确的类型
+            comm = result["communication"]
+            if "topics" not in comm or not isinstance(comm["topics"], list):
+                comm["topics"] = []
+            if "opening_lines" not in comm or not isinstance(comm["opening_lines"], list):
+                comm["opening_lines"] = []
+            if "tips" not in comm:
+                comm["tips"] = str(comm.get("tips", "")) if comm.get("tips") else ""
+        
+        print(f"[DEBUG] 规范化后的结果 - match_score: {result['match_score']}, personality长度: {len(result['personality'])}, interests长度: {len(result['interests'])}")
+        return result
     
     def chat(
         self,

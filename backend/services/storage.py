@@ -5,7 +5,20 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from typing import List
-from config import settings
+
+def _get_settings():
+    """动态获取settings，支持测试模式"""
+    try:
+        from config import settings
+        return settings
+    except ImportError:
+        import sys
+        if 'config' in sys.modules:
+            from config import settings
+            return settings
+        else:
+            from test_config import settings
+            return settings
 
 class StorageService:
     """
@@ -15,6 +28,7 @@ class StorageService:
     """
 
     def __init__(self):
+        settings = _get_settings()
         self.backend = (settings.STORAGE_BACKEND or "local").lower()
         self.storage_path = "uploads"
         os.makedirs(self.storage_path, exist_ok=True)

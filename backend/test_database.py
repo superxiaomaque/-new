@@ -1,7 +1,7 @@
 """
 测试数据库配置（使用SQLite）
 """
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, JSON, ForeignKey, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -48,6 +48,20 @@ class ShareLink(Base):
     share_token = Column(String(100), unique=True, index=True, nullable=False)
     view_count = Column(Integer, default=0)
     expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ModelCallLog(Base):
+    """模型调用记录（用于成本统计与预警）"""
+    __tablename__ = "model_call_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    call_type = Column(String(30), nullable=False)  # analysis | chat
+    model = Column(String(100), default="")
+    prompt_tokens = Column(Integer, default=0)
+    completion_tokens = Column(Integer, default=0)
+    total_tokens = Column(Integer, default=0)
+    estimated_cost = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 def init_db():

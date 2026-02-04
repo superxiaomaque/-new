@@ -1,5 +1,5 @@
 """
-导出服务：将分析结果导出为图片（PNG），以及批量导出Zip
+导出服务：将分析结果导出为图片（PNG）、PDF，以及批量导出Zip
 """
 
 from __future__ import annotations
@@ -11,6 +11,20 @@ import zipfile
 from typing import Any, Dict, List, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
+
+# PDF相关导入（延迟导入，避免影响基本功能）
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 
 SYSTEM_FONT_CANDIDATES = [

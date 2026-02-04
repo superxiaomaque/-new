@@ -9,8 +9,36 @@ from typing import Any, Dict, Tuple
 
 from sqlalchemy.orm import Session
 
-from config import settings
-from database import ModelCallLog
+def _get_settings():
+    """动态获取settings，支持测试模式"""
+    try:
+        from config import settings
+        return settings
+    except ImportError:
+        import sys
+        if 'config' in sys.modules:
+            from config import settings
+            return settings
+        else:
+            from test_config import settings
+            return settings
+
+def _get_model_call_log():
+    """动态获取ModelCallLog，支持测试模式"""
+    try:
+        from database import ModelCallLog
+        return ModelCallLog
+    except ImportError:
+        import sys
+        if 'database' in sys.modules:
+            from database import ModelCallLog
+            return ModelCallLog
+        else:
+            from test_database import ModelCallLog
+            return ModelCallLog
+
+settings = _get_settings()
+ModelCallLog = _get_model_call_log()
 
 
 def extract_usage(resp_json: Dict[str, Any]) -> Tuple[int, int, int]:

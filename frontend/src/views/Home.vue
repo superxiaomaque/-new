@@ -358,10 +358,25 @@ const stopProgress = () => {
 }
 
 const formatResult = (value) => {
+  if (value === null || value === undefined) {
+    return '暂无数据'
+  }
   if (Array.isArray(value)) {
     return value.join('、')
   }
-  return value || '暂无数据'
+  if (typeof value === 'object') {
+    // 如果是对象，尝试格式化为可读的文本
+    // 如果是 communication 对象，使用 formatCommunication
+    if (value.topics || value.opening_lines || value.tips) {
+      return formatCommunication(value)
+    }
+    // 其他对象，转换为格式化的JSON字符串
+    return JSON.stringify(value, null, 2)
+  }
+  if (typeof value === 'string' && value.trim() === '') {
+    return '暂无数据'
+  }
+  return String(value) || '暂无数据'
 }
 
 const submitAnalysis = async () => {
@@ -389,26 +404,60 @@ const submitAnalysis = async () => {
     
     // 保存分析ID和结果
     analysisId.value = response.data.id
-    const data = response.data.result
+    let data = response.data.result
+    
+    // 如果 result 是字符串，尝试解析为JSON
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data)
+      } catch (e) {
+        console.warn('解析结果失败，使用原始数据', e)
+      }
+    }
+    
+    // 如果 result 是数组，取第一个元素
+    if (Array.isArray(data) && data.length > 0) {
+      data = data[0]
+    }
+    
+    // 确保 data 是对象
+    if (typeof data !== 'object' || data === null) {
+      data = {}
+    }
+    
+    // 处理字符串字段：如果是对象或数组，转换为字符串
+    const processField = (value) => {
+      if (value === null || value === undefined) return '暂无数据'
+      if (typeof value === 'string') return value
+      if (typeof value === 'object') {
+        // 如果是对象或数组，转换为格式化的JSON字符串
+        return JSON.stringify(value, null, 2)
+      }
+      return String(value)
+    }
     
     // 处理分析结果
     result.value = {
       match_score: data.match_score || 0,
       success_rate: data.success_rate || 0,
-      personality: data.personality || '暂无数据',
-      interests: data.interests || '暂无数据',
-      values: data.values || '暂无数据',
-      emotion: data.emotion || '暂无数据',
-      income_analysis: data.income_analysis || '暂无数据',
-      communication: data.communication || {
-        topics: [],
-        opening_lines: [],
-        tips: '暂无数据'
-      },
-      relationship: data.relationship || '暂无数据',
-      warnings: data.warnings || '暂无数据',
+      personality: processField(data.personality),
+      interests: processField(data.interests),
+      values: processField(data.values),
+      emotion: processField(data.emotion),
+      income_analysis: processField(data.income_analysis),
+      communication: (typeof data.communication === 'object' && data.communication !== null) 
+        ? data.communication 
+        : {
+          topics: [],
+          opening_lines: [],
+          tips: '暂无数据'
+        },
+      relationship: processField(data.relationship),
+      warnings: processField(data.warnings),
       summary: data.summary || ''
     }
+    
+    console.log('[DEBUG] 处理后的分析结果:', result.value)
     
     // 显示结果
     showResult.value = true

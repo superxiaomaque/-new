@@ -32,6 +32,15 @@ analyses_module.database = database_module
 import main
 main.database = database_module
 
+# 修改services中的导入
+import services.doubao_api as doubao_api_module
+doubao_api_module.config = config_module
+# 重新初始化DoubaoAPI以使用正确的配置
+if hasattr(doubao_api_module, 'DoubaoAPI'):
+    # 重新加载模块以应用新的配置
+    import importlib
+    importlib.reload(doubao_api_module)
+
 # 初始化数据库
 print("正在初始化数据库...")
 database_module.init_db()
@@ -44,4 +53,5 @@ if __name__ == "__main__":
     print("访问地址: http://localhost:8000")
     print("API文档: http://localhost:8000/docs")
     print("="*50 + "\n")
-    uvicorn.run(main.app, host="0.0.0.0", port=8000, reload=True)
+    # 使用导入字符串以支持 reload 功能
+    uvicorn.run("test_main:app", host="0.0.0.0", port=8000, reload=True)

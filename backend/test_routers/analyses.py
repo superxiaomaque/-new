@@ -18,8 +18,17 @@ from test_config import settings
 
 router = APIRouter(prefix="/analyses", tags=["分析"])
 
-doubao_api = DoubaoAPI()
-storage_service = StorageService()
+# 安全初始化服务
+try:
+    doubao_api = DoubaoAPI()
+    storage_service = StorageService()
+except Exception as e:
+    print(f"[FATAL] 服务初始化失败: {e}")
+    import traceback
+    traceback.print_exc()
+    # 设置为None，在请求时再尝试初始化
+    doubao_api = None
+    storage_service = None
 
 @router.post("")
 async def create_analysis(
@@ -29,6 +38,20 @@ async def create_analysis(
     db: Session = Depends(get_db)
 ):
     """创建分析"""
+    # 确保服务已初始化
+    global doubao_api, storage_service
+    if doubao_api is None or storage_service is None:
+        try:
+            if doubao_api is None:
+                doubao_api = DoubaoAPI()
+            if storage_service is None:
+                storage_service = StorageService()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"服务初始化失败: {str(e)}"
+            )
+    
     # 检查图片数量
     if len(images) < settings.MIN_IMAGES:
         raise HTTPException(
@@ -102,12 +125,31 @@ async def create_analysis(
         }
         
     except Exception as e:
+        # 打印详细错误信息到后端日志
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[ERROR] 分析失败: {str(e)}")
+        print(f"[ERROR] 错误堆栈:\n{error_trace}")
+        
         # 如果分析失败，删除已上传的图片
         if 'image_urls' in locals():
-            storage_service.delete_images(image_urls)
+            try:
+                storage_service.delete_images(image_urls)
+            except Exception as cleanup_error:
+                print(f"[WARN] 清理图片失败: {cleanup_error}")
+        
+        # 返回详细错误信息
+        error_detail = str(e)
+        # 如果是HTTP错误，提取更详细的信息
+        if hasattr(e, 'response') and hasattr(e.response, 'text'):
+            try:
+                error_detail = f"{error_detail}\nAPI响应: {e.response.text[:200]}"
+            except:
+                pass
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"分析失败: {str(e)}"
+            detail=f"分析失败: {error_detail}"
         )
 
 @router.get("")
