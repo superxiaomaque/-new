@@ -270,15 +270,25 @@ const chatMessagesRef = ref(null)
 // 分析项配置
 const analysisItems = computed(() => {
   if (!result.value) return []
+  
+  // 确保所有字段都有值，即使为空也显示"暂无数据"
+  const getContent = (field) => {
+    const value = result.value[field]
+    if (value === null || value === undefined || value === '') {
+      return '暂无数据'
+    }
+    return value
+  }
+  
   return [
-    { name: 'personality', title: '性格分析', icon: 'user-o', content: result.value.personality },
-    { name: 'interests', title: '兴趣爱好', icon: 'star-o', content: result.value.interests },
-    { name: 'values', title: '价值观倾向', icon: 'like-o', content: result.value.values },
-    { name: 'emotion', title: '情感状态', icon: 'heart-o', content: result.value.emotion },
-    { name: 'income_analysis', title: '收入与消费能力', icon: 'gold-coin-o', content: result.value.income_analysis || '暂无数据' },
-    { name: 'communication', title: '沟通建议', icon: 'chat-o', content: formatCommunication(result.value.communication) },
-    { name: 'relationship', title: '关系推进建议', icon: 'friends-o', content: result.value.relationship },
-    { name: 'warnings', title: '避雷指南', icon: 'warning-o', content: result.value.warnings }
+    { name: 'personality', title: '性格分析', icon: 'user-o', content: getContent('personality') },
+    { name: 'interests', title: '兴趣爱好', icon: 'star-o', content: getContent('interests') },
+    { name: 'values', title: '价值观倾向', icon: 'like-o', content: getContent('values') },
+    { name: 'emotion', title: '情感状态', icon: 'heart-o', content: getContent('emotion') },
+    { name: 'income_analysis', title: '收入与消费能力', icon: 'gold-coin-o', content: getContent('income_analysis') },
+    { name: 'communication', title: '沟通建议', icon: 'chat-o', content: formatCommunication(result.value.communication) || '暂无数据' },
+    { name: 'relationship', title: '关系推进建议', icon: 'friends-o', content: getContent('relationship') },
+    { name: 'warnings', title: '避雷指南', icon: 'warning-o', content: getContent('warnings') }
   ]
 })
 
@@ -458,6 +468,15 @@ const submitAnalysis = async () => {
     }
     
     console.log('[DEBUG] 处理后的分析结果:', result.value)
+    console.log('[DEBUG] 各字段长度检查:')
+    console.log('  - personality:', result.value.personality?.length || 0)
+    console.log('  - interests:', result.value.interests?.length || 0)
+    console.log('  - values:', result.value.values?.length || 0)
+    console.log('  - emotion:', result.value.emotion?.length || 0)
+    console.log('  - income_analysis:', result.value.income_analysis?.length || 0)
+    console.log('  - relationship:', result.value.relationship?.length || 0)
+    console.log('  - warnings:', result.value.warnings?.length || 0)
+    console.log('  - communication:', JSON.stringify(result.value.communication))
     
     // 显示结果
     showResult.value = true

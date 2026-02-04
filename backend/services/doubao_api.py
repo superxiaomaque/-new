@@ -367,8 +367,11 @@ class DoubaoAPI:
             parsed = json.loads(text.strip())
             if isinstance(parsed, dict):
                 print("[DEBUG] 成功：直接解析为JSON")
+                print(f"[DEBUG] 解析后的字段: {list(parsed.keys())}")
                 # 确保所有字段都是正确的类型
-                return self._normalize_analysis_result(parsed)
+                normalized = self._normalize_analysis_result(parsed)
+                print(f"[DEBUG] 规范化后的字段: {list(normalized.keys())}")
+                return normalized
         except Exception as e:
             print(f"[DEBUG] 直接解析失败: {e}")
         
@@ -395,7 +398,10 @@ class DoubaoAPI:
                         parsed = json.loads(json_str)
                         if isinstance(parsed, dict):
                             print("[DEBUG] 成功：从文本中提取JSON")
-                            return self._normalize_analysis_result(parsed)
+                            print(f"[DEBUG] 提取后的字段: {list(parsed.keys())}")
+                            normalized = self._normalize_analysis_result(parsed)
+                            print(f"[DEBUG] 规范化后的字段: {list(normalized.keys())}")
+                            return normalized
                     except Exception as e:
                         print(f"[DEBUG] JSON提取失败: {e}")
                     start_idx = -1
@@ -466,7 +472,17 @@ class DoubaoAPI:
             if "tips" not in comm:
                 comm["tips"] = str(comm.get("tips", "")) if comm.get("tips") else ""
         
-        print(f"[DEBUG] 规范化后的结果 - match_score: {result['match_score']}, personality长度: {len(result['personality'])}, interests长度: {len(result['interests'])}")
+        print(f"[DEBUG] 规范化后的结果:")
+        print(f"  - match_score: {result['match_score']}")
+        print(f"  - success_rate: {result['success_rate']}")
+        print(f"  - personality长度: {len(result['personality'])}")
+        print(f"  - interests长度: {len(result['interests'])}")
+        print(f"  - values长度: {len(result['values'])}")
+        print(f"  - emotion长度: {len(result['emotion'])}")
+        print(f"  - income_analysis长度: {len(result['income_analysis'])}")
+        print(f"  - relationship长度: {len(result['relationship'])}")
+        print(f"  - warnings长度: {len(result['warnings'])}")
+        print(f"  - communication: {result['communication']}")
         return result
     
     def chat(
