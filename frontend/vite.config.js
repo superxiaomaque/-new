@@ -3,10 +3,17 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
-  define: {
-    'window': 'window',
-    'navigator': 'navigator',
-    'document': 'document'
+  build: {
+    target: 'es2015',
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    },
+    commonjsOptions: {
+      include: [/node_modules/]
+    }
   },
   server: {
     port: 3000,
