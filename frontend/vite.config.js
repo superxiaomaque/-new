@@ -3,6 +3,11 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
+  define: {
+    'window': 'window',
+    'navigator': 'navigator',
+    'document': 'document'
+  },
   server: {
     port: 3000,
     proxy: {
