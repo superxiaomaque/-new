@@ -1,0 +1,5 @@
+backend/
+*.md
+*.sh
+scripts/
+push_to_github.sh
