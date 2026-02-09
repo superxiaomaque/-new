@@ -218,13 +218,20 @@ class DoubaoAPI:
                 # 打印调试信息：查看豆包返回的原始文本
                 print(f"[DEBUG] 豆包返回的原始文本长度: {len(analysis_text)}")
                 print(f"[DEBUG] 豆包返回的原始文本前500字符: {analysis_text[:500]}")
+                print(f"[DEBUG] 豆包返回的原始文本总长度: {len(analysis_text)}")
                 
                 # 解析分析结果（确保返回前端需要的固定结构）
                 analysis_data = self._parse_analysis_result(analysis_text)
                 
-                # 打印调试信息：查看解析后的结果
-                print(f"[DEBUG] 解析后的 match_score: {analysis_data.get('match_score')}")
-                print(f"[DEBUG] 解析后的 personality 长度: {len(str(analysis_data.get('personality', '')))}")
+                # 打印调试信息：查看解析后的所有字段
+                print(f"[DEBUG] 解析后的所有字段:")
+                for key, value in analysis_data.items():
+                    if isinstance(value, str):
+                        print(f"  - {key}: 长度={len(value)}, 前100字符={value[:100] if value else '(空)'}")
+                    elif isinstance(value, dict):
+                        print(f"  - {key}: {value}")
+                    else:
+                        print(f"  - {key}: {value}")
                 
                 return analysis_data, usage
                 
@@ -441,18 +448,34 @@ class DoubaoAPI:
     
     def _normalize_analysis_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """规范化分析结果，确保所有字段都是正确的类型"""
+        # 辅助函数：安全地将值转换为字符串
+        def safe_str(value, default=""):
+            if value is None:
+                return default
+            if isinstance(value, str):
+                # 如果字符串不为空（去除空白后），返回原字符串；否则返回默认值
+                return value if value and value.strip() else default
+            if isinstance(value, (int, float, bool)):
+                return str(value)
+            if isinstance(value, (dict, list)):
+                # 对于字典和列表，如果为空，返回默认值；否则转换为字符串
+                if not value:  # 空字典或空列表
+                    return default
+                return str(value)  # 非空对象和数组转换为字符串
+            return str(value) if value else default
+        
         result = {
             "match_score": int(data.get("match_score", 0)) if isinstance(data.get("match_score"), (int, float, str)) else 0,
             "success_rate": int(data.get("success_rate", 0)) if isinstance(data.get("success_rate"), (int, float, str)) else 0,
-            "personality": str(data.get("personality", "")) if data.get("personality") else "",
-            "interests": str(data.get("interests", "")) if data.get("interests") else "",
-            "values": str(data.get("values", "")) if data.get("values") else "",
-            "emotion": str(data.get("emotion", "")) if data.get("emotion") else "",
-            "income_analysis": str(data.get("income_analysis", "")) if data.get("income_analysis") else "",
+            "personality": safe_str(data.get("personality")),
+            "interests": safe_str(data.get("interests")),
+            "values": safe_str(data.get("values")),
+            "emotion": safe_str(data.get("emotion")),
+            "income_analysis": safe_str(data.get("income_analysis")),
             "communication": data.get("communication", {}),
-            "relationship": str(data.get("relationship", "")) if data.get("relationship") else "",
-            "warnings": str(data.get("warnings", "")) if data.get("warnings") else "",
-            "summary": str(data.get("summary", "")) if data.get("summary") else ""
+            "relationship": safe_str(data.get("relationship")),
+            "warnings": safe_str(data.get("warnings")),
+            "summary": safe_str(data.get("summary"))
         }
         
         # 确保 communication 是字典格式
