@@ -192,6 +192,8 @@ async def get_analysis(
         # 如果 result 是数组，取第一个元素
         if isinstance(result_data, list) and len(result_data) > 0:
             result_data = result_data[0]
+        if isinstance(result_data, dict):
+            result_data = doubao_api._normalize_analysis_result(result_data)
     except:
         result_data = {"raw_text": analysis.result}
     

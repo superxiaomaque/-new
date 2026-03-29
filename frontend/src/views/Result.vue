@@ -33,6 +33,9 @@
         <van-collapse-item title="情感状态" name="emotion">
           <div class="result-content">{{ result.emotion || '暂无数据' }}</div>
         </van-collapse-item>
+        <van-collapse-item title="收入与消费能力" name="income_analysis">
+          <div class="result-content">{{ result.income_analysis || '暂无数据' }}</div>
+        </van-collapse-item>
         <van-collapse-item title="沟通建议" name="communication">
           <div class="result-content">
             <div v-if="result.communication.topics && result.communication.topics.length > 0">
@@ -120,6 +123,21 @@ const loadResult = async () => {
   try {
     const response = await api.get(`/analyses/${analysisId}`)
     const data = response.data.result
+    const incomeRaw =
+      data.income_analysis ??
+      data.incomeAnalysis ??
+      data.income_and_consumption ??
+      data.consumption_analysis ??
+      data.lifestyle
+    const formatIncome = (v) => {
+      if (v == null || v === '') return '暂无数据'
+      if (typeof v === 'string') return v
+      try {
+        return JSON.stringify(v, null, 2)
+      } catch {
+        return String(v)
+      }
+    }
     // 处理分析结果，确保所有字段都有值
     result.value = {
       match_score: data.match_score || 0,
@@ -128,6 +146,7 @@ const loadResult = async () => {
       interests: data.interests || '暂无数据',
       values: data.values || '暂无数据',
       emotion: data.emotion || '暂无数据',
+      income_analysis: formatIncome(incomeRaw),
       communication: data.communication || {
         topics: [],
         opening_lines: [],

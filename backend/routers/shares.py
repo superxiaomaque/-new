@@ -8,9 +8,11 @@ from datetime import datetime, timedelta
 from database import get_db, User, Analysis, ShareLink
 from anonymous import get_default_user
 from services.storage import StorageService
+from services.doubao_api import DoubaoAPI
 
 router = APIRouter(prefix="/shares", tags=["分享"])
 storage_service = StorageService()
+_doubao_api = DoubaoAPI()
 
 @router.post("/{analysis_id}")
 async def create_share_link(
@@ -91,6 +93,10 @@ async def get_share_analysis(
     import json
     try:
         result_data = json.loads(analysis.result)
+        if isinstance(result_data, list) and len(result_data) > 0:
+            result_data = result_data[0]
+        if isinstance(result_data, dict):
+            result_data = _doubao_api._normalize_analysis_result(result_data)
     except:
         result_data = {"raw_text": analysis.result}
     

@@ -446,6 +446,13 @@ const submitAnalysis = async () => {
       return String(value)
     }
     
+    const pickIncome = () =>
+      data.income_analysis ??
+      data.incomeAnalysis ??
+      data.income_and_consumption ??
+      data.consumption_analysis ??
+      data.lifestyle
+
     // 处理分析结果
     result.value = {
       match_score: data.match_score || 0,
@@ -454,7 +461,7 @@ const submitAnalysis = async () => {
       interests: processField(data.interests),
       values: processField(data.values),
       emotion: processField(data.emotion),
-      income_analysis: processField(data.income_analysis),
+      income_analysis: processField(pickIncome()),
       communication: (typeof data.communication === 'object' && data.communication !== null) 
         ? data.communication 
         : {

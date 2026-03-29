@@ -348,6 +348,8 @@ class DoubaoAPI:
 3. **必须具体可操作**：建议要具体到可以立即执行的程度
 4. **必须全面细致**：每个字段都要充分展开，不要简单敷衍
 5. **只输出JSON**：不要输出Markdown、不要用```包裹、不要在JSON前后加任何解释文字
+6. **键名必须严格使用蛇形命名**（如 income_analysis），禁止使用 incomeAnalysis 等驼峰键名。
+7. **income_analysis 为必填字符串字段**：须始终输出该键。若截图中消费/收入线索很少，须写清「公开信息有限」并给出保守的消费层级或区间推测；不得省略该键、不得留空字符串。
 """
         
         if supplementary_info:
@@ -448,6 +450,8 @@ class DoubaoAPI:
     
     def _normalize_analysis_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """规范化分析结果，确保所有字段都是正确的类型"""
+        import json as _json
+
         # 辅助函数：安全地将值转换为字符串
         def safe_str(value, default=""):
             if value is None:
@@ -463,6 +467,41 @@ class DoubaoAPI:
                     return default
                 return str(value)  # 非空对象和数组转换为字符串
             return str(value) if value else default
+
+        def resolve_income_analysis(raw_data: Dict[str, Any]) -> str:
+            """合并模型可能使用的多种键名或嵌套结构，避免 income_analysis 为空。"""
+            keys = (
+                "income_analysis",
+                "incomeAnalysis",
+                "income_and_consumption",
+                "consumption_analysis",
+                "consumption_ability",
+                "consumption",
+            )
+            for key in keys:
+                val = raw_data.get(key)
+                if val is None:
+                    continue
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+                if isinstance(val, (int, float, bool)):
+                    return str(val)
+                if isinstance(val, dict) and val:
+                    return _json.dumps(val, ensure_ascii=False)
+                if isinstance(val, list) and val:
+                    if all(isinstance(x, str) for x in val):
+                        return "\n".join(val)
+                    return _json.dumps(val, ensure_ascii=False)
+            lifestyle = raw_data.get("lifestyle")
+            if isinstance(lifestyle, dict) and lifestyle:
+                for nk in ("income_analysis", "consumption", "消费水平", "收入", "income"):
+                    v = lifestyle.get(nk)
+                    if isinstance(v, str) and v.strip():
+                        return v.strip()
+                return _json.dumps(lifestyle, ensure_ascii=False)
+            return ""
+
+        income_merged = resolve_income_analysis(data)
         
         result = {
             "match_score": int(data.get("match_score", 0)) if isinstance(data.get("match_score"), (int, float, str)) else 0,
@@ -471,7 +510,7 @@ class DoubaoAPI:
             "interests": safe_str(data.get("interests")),
             "values": safe_str(data.get("values")),
             "emotion": safe_str(data.get("emotion")),
-            "income_analysis": safe_str(data.get("income_analysis")),
+            "income_analysis": income_merged or safe_str(data.get("income_analysis")),
             "communication": data.get("communication", {}),
             "relationship": safe_str(data.get("relationship")),
             "warnings": safe_str(data.get("warnings")),
