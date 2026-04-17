@@ -1,0 +1,7 @@
+push_to_github.sh
+backend/.env
+backend/*.db
+backend/uploads/
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
