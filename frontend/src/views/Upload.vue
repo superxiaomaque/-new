@@ -312,6 +312,13 @@ const submitAnalysis = async () => {
     return
   }
   
+  // 开始新一次分析时，先清空上一次结果，避免“本次失败但仍显示上次内容”的错觉
+  showResult.value = false
+  result.value = null
+  analysisId.value = null
+  chatMessages.value = []
+  chatInput.value = ''
+
   analyzing.value = true
   startProgress()
   
@@ -356,6 +363,9 @@ const submitAnalysis = async () => {
     showToast({ type: 'success', message: '分析完成' })
   } catch (error) {
     console.error('分析失败', error)
+    // 失败时不要保留旧结果
+    showResult.value = false
+    result.value = null
     showToast({ type: 'fail', message: error.response?.data?.detail || '分析失败，请重试' })
   } finally {
     analyzing.value = false

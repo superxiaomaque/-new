@@ -370,25 +370,74 @@ class DoubaoAPI:
         """解析分析结果文本"""
         import json
         import re
+
+        def _try_parse_json(s: str) -> Optional[Dict[str, Any]]:
+            """尽最大努力把字符串解析成 dict JSON（兼容双层编码/前后夹杂文本）。"""
+            if not s:
+                return None
+            s = s.strip()
+
+            # 情况1：直接就是 JSON 对象
+            try:
+                parsed = json.loads(s)
+                if isinstance(parsed, dict):
+                    return parsed
+                # 情况2：外层是 JSON 字符串，里面才是 JSON 对象
+                if isinstance(parsed, str):
+                    try:
+                        inner = json.loads(parsed.strip())
+                        if isinstance(inner, dict):
+                            return inner
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+            # 情况3：从文本中截取第一个 JSON 对象（用 JSONDecoder raw_decode 更稳）
+            try:
+                start = s.find("{")
+                if start >= 0:
+                    dec = json.JSONDecoder()
+                    obj, _end = dec.raw_decode(s[start:])
+                    if isinstance(obj, dict):
+                        return obj
+            except Exception:
+                pass
+
+            # 情况4：截取从第一个 { 到最后一个 } 的大段再试一次
+            try:
+                start = s.find("{")
+                end = s.rfind("}")
+                if start >= 0 and end > start:
+                    obj = json.loads(s[start : end + 1])
+                    if isinstance(obj, dict):
+                        return obj
+            except Exception:
+                pass
+            return None
         
         # 方法1：尝试直接解析整个文本为JSON
-        try:
-            parsed = json.loads(text.strip())
-            if isinstance(parsed, dict):
-                print("[DEBUG] 成功：直接解析为JSON")
-                print(f"[DEBUG] 解析后的字段: {list(parsed.keys())}")
-                # 确保所有字段都是正确的类型
-                normalized = self._normalize_analysis_result(parsed)
-                print(f"[DEBUG] 规范化后的字段: {list(normalized.keys())}")
-                return normalized
-        except Exception as e:
-            print(f"[DEBUG] 直接解析失败: {e}")
+        parsed = _try_parse_json(text)
+        if isinstance(parsed, dict):
+            print("[DEBUG] 成功：直接解析为JSON")
+            print(f"[DEBUG] 解析后的字段: {list(parsed.keys())}")
+            normalized = self._normalize_analysis_result(parsed)
+            print(f"[DEBUG] 规范化后的字段: {list(normalized.keys())}")
+            return normalized
         
         # 方法2：尝试提取JSON（去掉可能的markdown代码块标记）
         # 去掉 ```json 和 ``` 标记
         cleaned_text = re.sub(r'```json\s*', '', text, flags=re.IGNORECASE)
         cleaned_text = re.sub(r'```\s*', '', cleaned_text)
         cleaned_text = cleaned_text.strip()
+
+        parsed2 = _try_parse_json(cleaned_text)
+        if isinstance(parsed2, dict):
+            print("[DEBUG] 成功：清洗后解析为JSON")
+            print(f"[DEBUG] 解析后的字段: {list(parsed2.keys())}")
+            normalized = self._normalize_analysis_result(parsed2)
+            print(f"[DEBUG] 规范化后的字段: {list(normalized.keys())}")
+            return normalized
         
         # 尝试提取第一个完整的JSON对象（支持嵌套）
         # 使用更强大的正则表达式来匹配嵌套的JSON对象
@@ -465,7 +514,11 @@ class DoubaoAPI:
                 # 对于字典和列表，如果为空，返回默认值；否则转换为字符串
                 if not value:  # 空字典或空列表
                     return default
-                return str(value)  # 非空对象和数组转换为字符串
+                # 用 JSON 序列化，避免 Python dict 的单引号格式影响前端可读性
+                try:
+                    return _json.dumps(value, ensure_ascii=False, indent=2)
+                except Exception:
+                    return str(value)
             return str(value) if value else default
 
         def resolve_income_analysis(raw_data: Dict[str, Any]) -> str:
